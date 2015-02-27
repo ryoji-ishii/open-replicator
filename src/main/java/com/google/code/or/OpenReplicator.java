@@ -26,6 +26,7 @@ import com.google.code.or.binlog.impl.ReplicationBasedBinlogParser;
 import com.google.code.or.binlog.impl.parser.DeleteRowsEventParser;
 import com.google.code.or.binlog.impl.parser.DeleteRowsEventV2Parser;
 import com.google.code.or.binlog.impl.parser.FormatDescriptionEventParser;
+import com.google.code.or.binlog.impl.parser.GtidEventParser;
 import com.google.code.or.binlog.impl.parser.IncidentEventParser;
 import com.google.code.or.binlog.impl.parser.IntvarEventParser;
 import com.google.code.or.binlog.impl.parser.QueryEventParser;
@@ -40,6 +41,9 @@ import com.google.code.or.binlog.impl.parser.WriteRowsEventParser;
 import com.google.code.or.binlog.impl.parser.WriteRowsEventV2Parser;
 import com.google.code.or.binlog.impl.parser.XidEventParser;
 import com.google.code.or.common.glossary.column.StringColumn;
+import com.google.code.or.common.util.MySQLConstants;
+import com.google.code.or.net.impl.packet.command.ComBinlogDumpGtidPacket;
+import com.google.code.or.query.QueryHelper;
 import com.google.code.or.io.impl.SocketFactoryImpl;
 import com.google.code.or.net.Packet;
 import com.google.code.or.net.Transport;
@@ -48,6 +52,8 @@ import com.google.code.or.net.impl.AuthenticatorImpl;
 import com.google.code.or.net.impl.TransportImpl;
 import com.google.code.or.net.impl.packet.ErrorPacket;
 import com.google.code.or.net.impl.packet.command.ComBinlogDumpPacket;
+import com.google.code.or.query.QueryResultRow;
+import com.google.code.or.query.QueryResultSet;
 
 /**
  * 
@@ -66,7 +72,10 @@ public class OpenReplicator {
 	protected int level1BufferSize = 1024 * 1024;
 	protected int level2BufferSize = 8 * 1024 * 1024;
 	protected int socketReceiveBufferSize = 512 * 1024;
-	
+
+	protected boolean checksumEnabled;
+	protected boolean verifyChecksum;
+
 	//
 	protected Transport transport;
 	protected BinlogParser binlogParser;
@@ -89,9 +98,18 @@ public class OpenReplicator {
 		//
 		if(this.transport == null) this.transport = getDefaultTransport();
 		this.transport.connect(this.host, this.port);
-		
+
+		this.checksumEnabled = this.isEnabledChecksum();
+		if (this.checksumEnabled) {
+			this.useChecksum();
+		}
+		if (this.binlogFileName == null) {
+			this.adjustPosition();
+		}
+
 		//
-		dumpBinlog();
+		//dumpBinlog();
+		dumpBinGtidlog();
 		
 		//
 		if(this.binlogParser == null) this.binlogParser = getDefaultBinlogParser();
@@ -112,7 +130,7 @@ public class OpenReplicator {
 		}
 		
 		//
-		this.transport.disconnect();
+		this.transport.disconnect(this.checksumEnabled);
 		this.binlogParser.stop(timeout, unit);
 	}
 	
@@ -215,6 +233,14 @@ public class OpenReplicator {
 		this.socketReceiveBufferSize = socketReceiveBufferSize;
 	}
 
+	public boolean isVerifyChecksum() {
+		return verifyChecksum;
+	}
+
+	public void setVerifyChecksum(boolean verifyChecksum) {
+		this.verifyChecksum = verifyChecksum;
+	}
+
 	/**
 	 * 
 	 */
@@ -243,6 +269,48 @@ public class OpenReplicator {
 	}
 
 	/**
+	 *
+	 * @return
+	 * @throws Exception
+	 */
+	protected boolean isEnabledChecksum() throws Exception {
+		QueryResultSet resultSet = QueryHelper.query(this.transport, "SHOW GLOBAL VARIABLES LIKE 'BINLOG_CHECKSUM'");
+		while (resultSet.hasNext()) {
+			QueryResultRow row = resultSet.next();
+			String checksum = row.getValue("VARIABLE_VALUE").toString();
+			if (!"NONE".equals(checksum)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 *
+	 * @throws Exception
+	 */
+	protected void useChecksum() throws Exception {
+		int cnt = QueryHelper.execute(this.transport, "set @master_binlog_checksum= @@global.binlog_checksum");
+	}
+
+	/**
+	 *
+	 * @return
+	 * @throws Exception
+	 */
+	protected long adjustPosition() throws Exception {
+		QueryResultSet resultSet = QueryHelper.query(this.transport, "SHOW MASTER STATUS");
+		while (resultSet.hasNext()) {
+			QueryResultRow row = resultSet.next();
+			this.binlogFileName = row.getValue("File").toString();
+			this.binlogPosition = Long.parseLong(row.getValue("Position").toString());
+			System.out.println("file=" + this.binlogFileName);
+			System.out.println("position=" + this.binlogPosition);
+		}
+		return this.binlogPosition;
+	}
+
+	/**
 	 * 
 	 */
 	protected void dumpBinlog() throws Exception {
@@ -261,6 +329,24 @@ public class OpenReplicator {
 			final ErrorPacket error = ErrorPacket.valueOf(packet);
 			throw new TransportException(error);
 		} 
+	}
+
+	protected void dumpBinGtidlog() throws Exception {
+		//
+		final ComBinlogDumpGtidPacket command = new ComBinlogDumpGtidPacket();
+		command.setBinlogFlag(MySQLConstants.BINLOG_THROUGH_POSITION);
+		command.setServerId(this.serverId);
+		command.setBinlogPosition(this.binlogPosition);
+		command.setBinlogFileName(StringColumn.valueOf(this.binlogFileName.getBytes(this.encoding)));
+		this.transport.getOutputStream().writePacket(command);
+		this.transport.getOutputStream().flush();
+
+		//
+		final Packet packet = this.transport.getInputStream().readPacket();
+		if(packet.getPacketBody()[0] == ErrorPacket.PACKET_MARKER) {
+			final ErrorPacket error = ErrorPacket.valueOf(packet);
+			throw new TransportException(error);
+		}
 	}
 	
 	protected Transport getDefaultTransport() throws Exception {
@@ -304,10 +390,13 @@ public class OpenReplicator {
 		r.registgerEventParser(new UpdateRowsEventV2Parser());
 		r.registgerEventParser(new DeleteRowsEventV2Parser());
 		r.registgerEventParser(new FormatDescriptionEventParser());
+		r.registgerEventParser(new GtidEventParser());
 		
 		//
 		r.setTransport(this.transport);
 		r.setBinlogFileName(this.binlogFileName);
+		r.setChecksumEnabled(this.checksumEnabled);
+		r.setVerifyChecksum(this.verifyChecksum);
 		return r;
 	}
 }

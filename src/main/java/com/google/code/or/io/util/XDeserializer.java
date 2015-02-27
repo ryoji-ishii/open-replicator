@@ -117,4 +117,14 @@ public class XDeserializer implements XInputStream {
 	public BitColumn readBit(int length, boolean littleEndian) throws IOException {
 		return tis.readBit(length, littleEndian);
 	}
+
+	@Override
+	public void mark() {
+		this.tis.mark();
+	}
+
+	@Override
+	public boolean validate(long checksum, int length) {
+		return this.tis.validate(checksum, length);
+	}
 }

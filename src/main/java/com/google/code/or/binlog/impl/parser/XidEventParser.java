@@ -48,7 +48,10 @@ public class XidEventParser extends AbstractBinlogEventParser {
 	public void parse(XInputStream is, BinlogEventV4Header header, BinlogParserContext context)
 	throws IOException {
 		final XidEvent event = new XidEvent(header);
-		event.setXid(is.readLong(8)); 
+		event.setXid(is.readLong(8));
+		if (context.isEnabledChecksum()) {
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		}
 		context.getEventListener().onEvents(event);
 	}
 }

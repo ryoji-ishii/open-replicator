@@ -62,6 +62,9 @@ public class UserVarEventParser extends AbstractBinlogEventParser {
 			event.setVarValueLength(is.readInt(4));
 			event.setVarValue(parseUserVariable(is, event));
 		}
+		if (context.isEnabledChecksum()) {
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		}
 		context.getEventListener().onEvents(event);
 	}
 

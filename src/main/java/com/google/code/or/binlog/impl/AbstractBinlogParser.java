@@ -16,6 +16,7 @@
  */
 package com.google.code.or.binlog.impl;
 
+import java.io.EOFException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,12 +55,14 @@ public abstract class AbstractBinlogParser implements BinlogParser {
 	protected BinlogEventFilter eventFilter;
 	protected BinlogEventListener eventListener;
 	protected boolean clearTableMapEventsOnRotate = true;
+	protected boolean checksumEnabled;
+	protected boolean verifyChecksum;
 	protected final List<BinlogParserListener> parserListeners;
 	protected final AtomicBoolean verbose = new AtomicBoolean(false);
 	protected final AtomicBoolean running = new AtomicBoolean(false);
 	protected final BinlogEventParser defaultParser = new NopEventParser();
 	protected final BinlogEventParser[] parsers = new BinlogEventParser[128];
-	
+
 	//
 	protected abstract void doParse() throws Exception;
 	protected abstract void doStart() throws Exception;
@@ -162,7 +165,23 @@ public abstract class AbstractBinlogParser implements BinlogParser {
 	public void setClearTableMapEventsOnRotate(boolean clearTableMapEventsOnRotate) {
 		this.clearTableMapEventsOnRotate = clearTableMapEventsOnRotate;
 	}
-	
+
+	public boolean isChecksumEnabled() {
+		return checksumEnabled;
+	}
+
+	public void setChecksumEnabled(boolean checksumEnabled) {
+		this.checksumEnabled = checksumEnabled;
+	}
+
+	public boolean isVerifyChecksum() {
+		return verifyChecksum;
+	}
+
+	public void setVerifyChecksum(boolean verifyChecksum) {
+		this.verifyChecksum = verifyChecksum;
+	}
+
 	/**
 	 * 
 	 */
@@ -244,7 +263,9 @@ public abstract class AbstractBinlogParser implements BinlogParser {
 				doParse();
 			} catch (Exception e) {
 				notifyOnException(e);
-				LOGGER.error("failed to parse binlog", e);
+				if (!(e instanceof EOFException)) {
+					LOGGER.error("failed to parse binlog", e);
+				}
 			} finally {
 				try {
 					stop(0, TimeUnit.MILLISECONDS);
@@ -259,6 +280,8 @@ public abstract class AbstractBinlogParser implements BinlogParser {
 		//
 		private String binlogFileName;
 		private final Map<Long, TableMapEvent> tableMapEvents = new HashMap<Long, TableMapEvent>();
+		private boolean checksumEnabled;
+		private boolean verifyChecksum;
 
 		/**
 		 * 
@@ -266,8 +289,10 @@ public abstract class AbstractBinlogParser implements BinlogParser {
 		public Context() {
 		}
 		
-		public Context(String binlogFileName) {
+		public Context(String binlogFileName, boolean checksumEnabled, boolean verifyChecksum) {
 			this.binlogFileName = binlogFileName;
+			this.checksumEnabled = checksumEnabled;
+			this.verifyChecksum = verifyChecksum;
 		}
 		
 		/**
@@ -288,7 +313,16 @@ public abstract class AbstractBinlogParser implements BinlogParser {
 		public final TableMapEvent getTableMapEvent(long tableId) {
 			return this.tableMapEvents.get(tableId);
 		}
-		
+
+		@Override
+		public boolean isEnabledChecksum() {
+			return this.checksumEnabled;
+		}
+
+		public boolean isVerifyChecksum() {
+			return verifyChecksum;
+		}
+
 		/**
 		 * 
 		 */

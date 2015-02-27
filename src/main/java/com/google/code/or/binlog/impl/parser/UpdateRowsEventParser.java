@@ -62,6 +62,9 @@ public class UpdateRowsEventParser extends AbstractRowEventParser {
 		event.setUsedColumnsBefore(is.readBit(event.getColumnCount().intValue()));
 		event.setUsedColumnsAfter(is.readBit(event.getColumnCount().intValue()));
 		event.setRows(parseRows(is, tme, event));
+		if (context.isEnabledChecksum()) {
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		}
 		context.getEventListener().onEvents(event);
 	}
 	

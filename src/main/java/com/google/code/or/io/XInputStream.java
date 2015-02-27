@@ -69,4 +69,8 @@ public interface XInputStream {
 	long readLong(int length, boolean littleEndian) throws IOException;
 	
 	BitColumn readBit(int length, boolean littleEndian) throws IOException;
+
+	void mark();
+
+	boolean validate(long checksum, int length);
 }

@@ -20,6 +20,7 @@ import java.io.IOException;
 
 import com.google.code.or.common.glossary.UnsignedLong;
 import com.google.code.or.common.glossary.column.StringColumn;
+import com.google.code.or.common.util.MySQLConstants;
 import com.google.code.or.common.util.ToStringBuilder;
 import com.google.code.or.io.util.XDeserializer;
 import com.google.code.or.io.util.XSerializer;
@@ -127,16 +128,27 @@ public class OKPacket extends AbstractPacket {
 	 * 
 	 */
 	public static OKPacket valueOf(Packet packet) throws IOException {
+		return valueOf(packet, false);
+	}
+
+	public static OKPacket valueOf(Packet packet, boolean enabledChecksum) throws IOException {
 		final XDeserializer d = new XDeserializer(packet.getPacketBody());
 		final OKPacket r = new OKPacket();
 		r.length = packet.getLength();
 		r.sequence = packet.getSequence();
 		r.packetMarker = d.readInt(1);
+		d.mark();
 		r.affectedRows = d.readUnsignedLong();
 		r.insertId = d.readUnsignedLong();
 		r.serverStatus = d.readInt(2);
 		r.warningCount = d.readInt(2);
-		if(d.available() > 0) r.message = d.readFixedLengthString(d.available());
+		if (enabledChecksum) {
+			if (d.available() > MySQLConstants.BINLOG_CHECKSUM_LEN) r.message = d.readFixedLengthString(d.available() - MySQLConstants.BINLOG_CHECKSUM_LEN);
+			long checksum = d.readLong(MySQLConstants.BINLOG_CHECKSUM_LEN);
+			d.validate(checksum, packet.getLength() - 5);
+		} else {
+			if (d.available() > 0) r.message = d.readFixedLengthString(d.available());
+		}
 		return r;
 	}
 }

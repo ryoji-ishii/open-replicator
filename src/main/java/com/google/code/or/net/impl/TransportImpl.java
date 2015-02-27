@@ -94,7 +94,9 @@ public class TransportImpl extends AbstractTransport {
 			this.context.setThreadId(greeting.getThreadId());
 			this.context.setProtocolVersion(greeting.getProtocolVersion());
 			this.context.setScramble(greeting.getScramble1().toString() + greeting.getScramble2().toString());
-			
+
+			LOGGER.info("greeting : {}", greeting.toString());
+
 			//
 			if(isVerbose() && LOGGER.isInfoEnabled()) {
 				LOGGER.info("connected to host: {}, port: {}, context: {}", new Object[]{host, port, this.context});
@@ -105,11 +107,12 @@ public class TransportImpl extends AbstractTransport {
 		this.authenticator.login(this);
 	}
 
-	public void disconnect() throws Exception {
+	public void disconnect(boolean enabledChecksum) throws Exception {
 		//
 		if(!this.connected.compareAndSet(true, false)) {
 			return;
 		}
+		this.authenticator.logout(this, enabledChecksum);
 		
 		//
 		IOUtils.closeQuietly(this.is);

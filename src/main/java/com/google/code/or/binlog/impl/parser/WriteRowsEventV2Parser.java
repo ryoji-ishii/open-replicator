@@ -25,6 +25,7 @@ import com.google.code.or.binlog.BinlogParserContext;
 import com.google.code.or.binlog.impl.event.TableMapEvent;
 import com.google.code.or.binlog.impl.event.WriteRowsEventV2;
 import com.google.code.or.common.glossary.Row;
+import com.google.code.or.common.util.MySQLConstants;
 import com.google.code.or.io.XInputStream;
 
 /**
@@ -61,17 +62,21 @@ public class WriteRowsEventV2Parser extends AbstractRowEventParser {
 		if(event.getExtraInfoLength() > 2) event.setExtraInfo(is.readBytes(event.getExtraInfoLength() - 2));
 		event.setColumnCount(is.readUnsignedLong()); 
 		event.setUsedColumns(is.readBit(event.getColumnCount().intValue()));
-		event.setRows(parseRows(is, tme, event));
+		event.setRows(parseRows(is, tme, event, context.isEnabledChecksum()));
+		if (context.isEnabledChecksum()) {
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		}
 		context.getEventListener().onEvents(event);
 	}
 	
 	/**
 	 * 
 	 */
-	protected List<Row> parseRows(XInputStream is, TableMapEvent tme, WriteRowsEventV2 wre)
+	protected List<Row> parseRows(XInputStream is, TableMapEvent tme, WriteRowsEventV2 wre, boolean enabledChecksum)
 	throws IOException {
 		final List<Row> r = new LinkedList<Row>();
-		while(is.available() > 0) {
+		int surplus = enabledChecksum ? MySQLConstants.BINLOG_CHECKSUM_LEN : 0;
+		while(is.available() > surplus) {
 			r.add(parseRow(is, tme, wre.getUsedColumns()));
 		}
 		return r;

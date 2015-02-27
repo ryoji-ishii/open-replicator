@@ -60,6 +60,9 @@ public class WriteRowsEventParser extends AbstractRowEventParser {
 		event.setColumnCount(is.readUnsignedLong()); 
 		event.setUsedColumns(is.readBit(event.getColumnCount().intValue()));
 		event.setRows(parseRows(is, tme, event));
+		if (context.isEnabledChecksum()) {
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		}
 		context.getEventListener().onEvents(event);
 	}
 	

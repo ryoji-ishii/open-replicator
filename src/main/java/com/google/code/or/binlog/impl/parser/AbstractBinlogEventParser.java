@@ -17,6 +17,11 @@
 package com.google.code.or.binlog.impl.parser;
 
 import com.google.code.or.binlog.BinlogEventParser;
+import com.google.code.or.binlog.BinlogEventV4Header;
+import com.google.code.or.common.util.MySQLConstants;
+import com.google.code.or.io.XInputStream;
+
+import java.io.IOException;
 
 /**
  * 
@@ -38,5 +43,20 @@ public abstract class AbstractBinlogEventParser implements BinlogEventParser {
 	 */
 	public final int getEventType() {
 		return eventType;
+	}
+
+	/**
+	 *
+	 * @param is
+	 * @param header
+	 * @param verifyChecksum
+	 * @throws IOException
+	 */
+	public void validateChecksum(XInputStream is, BinlogEventV4Header header, boolean verifyChecksum) throws IOException {
+		long checksum = is.readLong(MySQLConstants.BINLOG_CHECKSUM_LEN);
+		int length = (int)header.getEventLength() - MySQLConstants.BINLOG_CHECKSUM_LEN;
+		if (verifyChecksum && !is.validate(checksum, length)) {
+			throw new IOException("detect replication data corruption.");
+		}
 	}
 }

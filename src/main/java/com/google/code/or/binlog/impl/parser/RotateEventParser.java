@@ -21,6 +21,7 @@ import java.io.IOException;
 import com.google.code.or.binlog.BinlogEventV4Header;
 import com.google.code.or.binlog.BinlogParserContext;
 import com.google.code.or.binlog.impl.event.RotateEvent;
+import com.google.code.or.common.util.MySQLConstants;
 import com.google.code.or.io.XInputStream;
 
 /**
@@ -43,7 +44,12 @@ public class RotateEventParser extends AbstractBinlogEventParser {
 	throws IOException {
 		final RotateEvent event = new RotateEvent(header);
 		event.setBinlogPosition(is.readLong(8));
-		event.setBinlogFileName(is.readFixedLengthString(is.available()));
+		if (context.isEnabledChecksum()) {
+			event.setBinlogFileName(is.readFixedLengthString(is.available() - MySQLConstants.BINLOG_CHECKSUM_LEN));
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		} else {
+			event.setBinlogFileName(is.readFixedLengthString(is.available()));
+		}
 		context.getEventListener().onEvents(event);
 	}
 }

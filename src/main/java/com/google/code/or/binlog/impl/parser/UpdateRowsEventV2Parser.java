@@ -26,6 +26,7 @@ import com.google.code.or.binlog.impl.event.TableMapEvent;
 import com.google.code.or.binlog.impl.event.UpdateRowsEventV2;
 import com.google.code.or.common.glossary.Pair;
 import com.google.code.or.common.glossary.Row;
+import com.google.code.or.common.util.MySQLConstants;
 import com.google.code.or.io.XInputStream;
 
 /**
@@ -59,23 +60,34 @@ public class UpdateRowsEventV2Parser extends AbstractRowEventParser {
 		event.setTableId(tableId);
 		event.setReserved(is.readInt(2));
 		event.setExtraInfoLength(is.readInt(2));
-		if(event.getExtraInfoLength() > 2) event.setExtraInfo(is.readBytes(event.getExtraInfoLength() - 2));
+		System.out.println(event.getExtraInfoLength());
+		if(event.getExtraInfoLength() > 2) {
+			event.setExtraInfo(is.readBytes(event.getExtraInfoLength() - 2));
+			System.out.println(new String(event.getExtraInfo()));
+		}
 		event.setColumnCount(is.readUnsignedLong()); 
 		event.setUsedColumnsBefore(is.readBit(event.getColumnCount().intValue()));
 		event.setUsedColumnsAfter(is.readBit(event.getColumnCount().intValue()));
-		event.setRows(parseRows(is, tme, event));
+		System.out.println(event.toString());
+		event.setRows(parseRows(is, tme, event, context.isEnabledChecksum()));
+		if (context.isEnabledChecksum()) {
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		}
 		context.getEventListener().onEvents(event);
 	}
 	
 	/**
 	 * 
 	 */
-	protected List<Pair<Row>> parseRows(XInputStream is, TableMapEvent tme, UpdateRowsEventV2 ure)
+	protected List<Pair<Row>> parseRows(XInputStream is, TableMapEvent tme, UpdateRowsEventV2 ure, boolean enabledChecksum)
 	throws IOException {
 		final List<Pair<Row>> r = new LinkedList<Pair<Row>>();
-		while(is.available() > 0) {
+		int surplus = enabledChecksum ? MySQLConstants.BINLOG_CHECKSUM_LEN : 0;
+		while(is.available() > surplus) {
 			final Row before = parseRow(is, tme, ure.getUsedColumnsBefore());
+			System.out.println("before=" + before);
 			final Row after = parseRow(is, tme, ure.getUsedColumnsAfter());
+			System.out.println("after=" + after);
 			r.add(new Pair<Row>(before, after));
 		}
 		return r;

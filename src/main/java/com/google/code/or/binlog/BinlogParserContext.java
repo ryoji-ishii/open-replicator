@@ -29,4 +29,8 @@ public interface BinlogParserContext {
 	BinlogEventListener getEventListener();
 	
 	TableMapEvent getTableMapEvent(long tableId);
+
+	boolean isEnabledChecksum();
+
+	boolean isVerifyChecksum();
 }

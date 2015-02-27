@@ -32,6 +32,7 @@ import com.google.code.or.binlog.impl.variable.status.QCatalogCode;
 import com.google.code.or.binlog.impl.variable.status.QCatalogNzCode;
 import com.google.code.or.binlog.impl.variable.status.QCharsetCode;
 import com.google.code.or.binlog.impl.variable.status.QCharsetDatabaseCode;
+import com.google.code.or.binlog.impl.variable.status.QCommitTs;
 import com.google.code.or.binlog.impl.variable.status.QFlags2Code;
 import com.google.code.or.binlog.impl.variable.status.QInvoker;
 import com.google.code.or.binlog.impl.variable.status.QLcTimeNamesCode;
@@ -41,6 +42,7 @@ import com.google.code.or.binlog.impl.variable.status.QSQLModeCode;
 import com.google.code.or.binlog.impl.variable.status.QTableMapForUpdateCode;
 import com.google.code.or.binlog.impl.variable.status.QTimeZoneCode;
 import com.google.code.or.binlog.impl.variable.status.QUpdatedDBNames;
+import com.google.code.or.common.util.MySQLConstants;
 import com.google.code.or.io.XInputStream;
 import com.google.code.or.io.util.XDeserializer;
 
@@ -72,7 +74,12 @@ public class QueryEventParser extends AbstractBinlogEventParser {
 		event.setStatusVariablesLength(is.readInt(2));
 		event.setStatusVariables(parseStatusVariables(is.readBytes(event.getStatusVariablesLength())));
 		event.setDatabaseName(is.readNullTerminatedString());
-		event.setSql(is.readFixedLengthString(is.available()));
+		if (context.isEnabledChecksum()) {
+			event.setSql(is.readFixedLengthString(is.available() - MySQLConstants.BINLOG_CHECKSUM_LEN));
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		} else {
+			event.setSql(is.readFixedLengthString(is.available()));
+		}
 		context.getEventListener().onEvents(event);
 	}
 
@@ -101,6 +108,7 @@ public class QueryEventParser extends AbstractBinlogEventParser {
 			case QInvoker.TYPE: r.add(QInvoker.valueOf(d)); break;
 			case QUpdatedDBNames.TYPE: r.add(QUpdatedDBNames.valueOf(d)); break;
 			case QMicroseconds.TYPE: r.add(QMicroseconds.valueOf(d)); break;
+			case QCommitTs.TYPE: r.add(QCommitTs.valueOf(d)); abort = true; break;
 			default: LOGGER.warn("unknown status variable type: " + type); abort = true; break;
 			}
 		}

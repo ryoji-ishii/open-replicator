@@ -84,7 +84,9 @@ public final class MySQLConstants {
 	public static final int COM_SET_OPTION = 0x1b;
 	public static final int COM_STMT_FETCH = 0x1c;
 	public static final int COM_DAEMON = 0x1d;
-	public static final int COM_END = 0x1e;
+	public static final int COM_BINLOG_DUMP_GTID = 0x1e;
+	public static final int COM_RESET_CONNECTION = 0x1f;
+	public static final int COM_END = 0x20;
 	
 	// Status variable type
 	public static final int Q_FLAGS2_CODE = 0;
@@ -101,6 +103,7 @@ public final class MySQLConstants {
 	public static final int Q_INVOKER = 11;
 	public static final int Q_UPDATED_DB_NAMES = 12;
 	public static final int Q_MICROSECONDS = 13;
+	public static final int Q_COMMIT_TS = 14;
 	
 	public static final int MAX_DBS_IN_EVENT_MTS = 16;
 	public static final int OVER_MAX_DBS_IN_EVENT_MTS = 254;
@@ -215,4 +218,16 @@ public final class MySQLConstants {
 	public static final int GTID_LOG_EVENT = 33;
 	public static final int ANONYMOUS_GTID_LOG_EVENT = 34;
 	public static final int PREVIOUS_GTIDS_LOG_EVENT = 35;
+
+	public static final int BINLOG_CHECKSUM_ALG_OFF = 0;
+	public static final int BINLOG_CHECKSUM_ALG_CRC32 = 1;
+	public static final int BINLOG_CHECKSUM_ALG_UNDEF = 255;
+
+	public static final int CHECKSUM_CRC32_SIGNATURE_LEN = 4;
+	public static final int BINLOG_CHECKSUM_LEN = CHECKSUM_CRC32_SIGNATURE_LEN;
+
+	public static final int BINLOG_DUMP_NEVER_STOP = 0x00;
+	public static final int BINLOG_DUMP_NON_BLOCK = 0x01;
+	public static final int BINLOG_THROUGH_POSITION = 0x02;
+	public static final int BINLOG_THROUGH_GTID = 0x04;
 }

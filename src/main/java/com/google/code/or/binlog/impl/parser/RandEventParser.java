@@ -44,6 +44,9 @@ public class RandEventParser extends AbstractBinlogEventParser {
 		final RandEvent event = new RandEvent(header);
 		event.setRandSeed1(is.readLong(8));
 		event.setRandSeed2(is.readLong(8));
+		if (context.isEnabledChecksum()) {
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		}
 		context.getEventListener().onEvents(event);
 	}
 }

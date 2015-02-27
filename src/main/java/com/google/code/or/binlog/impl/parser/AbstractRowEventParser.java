@@ -84,11 +84,13 @@ public abstract class AbstractRowEventParser extends AbstractBinlogEventParser {
 	 */
 	protected Row parseRow(XInputStream is, TableMapEvent tme, BitColumn usedColumns) 
 	throws IOException {
+		System.out.println(usedColumns);
 		//
 		int unusedColumnCount = 0;
 		final byte[] types = tme.getColumnTypes();
 		final Metadata metadata = tme.getColumnMetadata();
 		final BitColumn nullColumns = is.readBit(types.length);
+		System.out.println(nullColumns);
 		final List<Column> columns = new ArrayList<Column>(types.length);
 		for(int i = 0; i < types.length; ++i) {
 			//
@@ -123,7 +125,7 @@ public abstract class AbstractRowEventParser extends AbstractBinlogEventParser {
 				columns.add(NullColumn.valueOf(type));
 				continue;
 			}
-			
+			System.out.println("type=" + type);
 			//
 			switch(type) {
 			case MySQLConstants.TYPE_TINY: columns.add(TinyColumn.valueOf(is.readSignedInt(1))); break;

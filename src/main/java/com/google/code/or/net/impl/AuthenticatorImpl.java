@@ -32,6 +32,7 @@ import com.google.code.or.net.TransportException;
 import com.google.code.or.net.impl.packet.ErrorPacket;
 import com.google.code.or.net.impl.packet.OKPacket;
 import com.google.code.or.net.impl.packet.RawPacket;
+import com.google.code.or.net.impl.packet.command.ComQuit;
 
 /**
  * 
@@ -94,7 +95,26 @@ public class AuthenticatorImpl implements Transport.Authenticator {
 			throw new RuntimeException("assertion failed, invalid packet: " + response);
 		}
 	}
-	
+
+	@Override
+	public void logout(Transport transport, boolean enabledChecksum) throws IOException {
+		ComQuit command = new ComQuit();
+		transport.getOutputStream().writePacket(command);
+		transport.getOutputStream().flush();
+		try {
+			Packet packet = transport.getInputStream().readPacket();
+			if (packet.getPacketBody()[0] == ErrorPacket.PACKET_MARKER) {
+				final ErrorPacket error = ErrorPacket.valueOf(packet);
+				throw new TransportException(error);
+			}
+			LOGGER.info(OKPacket.valueOf(packet, enabledChecksum).toString());
+		} catch (IOException e) {
+			if (LOGGER.isDebugEnabled()) {
+				LOGGER.debug(e.getMessage(), e);
+			}
+		}
+	}
+
 	/**
 	 * 
 	 */

@@ -28,7 +28,7 @@ public interface Transport {
 	 */
 	boolean isConnected();
 	
-	void disconnect() throws Exception;
+	void disconnect(boolean enabledChecksum) throws Exception;
 	
 	void connect(String host, int port) throws Exception;
 	
@@ -47,5 +47,7 @@ public interface Transport {
 	interface Authenticator {
 
 		void login(Transport transport) throws Exception;
+
+		void logout(Transport transport, boolean enabledChecksum) throws Exception;
 	}
 }

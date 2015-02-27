@@ -78,6 +78,9 @@ public class TableMapEventParser extends AbstractBinlogEventParser {
 		event.setColumnMetadataCount(is.readUnsignedLong()); 
 		event.setColumnMetadata(Metadata.valueOf(event.getColumnTypes(), is.readBytes(event.getColumnMetadataCount().intValue())));
 		event.setColumnNullabilities(is.readBit(event.getColumnCount().intValue()));
+		if (context.isEnabledChecksum()) {
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		}
 		context.getEventListener().onEvents(event);
 	}
 }

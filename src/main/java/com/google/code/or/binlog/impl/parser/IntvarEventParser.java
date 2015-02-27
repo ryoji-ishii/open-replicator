@@ -45,6 +45,9 @@ public class IntvarEventParser extends AbstractBinlogEventParser {
 		final IntvarEvent event = new IntvarEvent(header);
 		event.setType(is.readInt(1));
 		event.setValue(UnsignedLong.valueOf(is.readLong(8)));
+		if (context.isEnabledChecksum()) {
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		}
 		context.getEventListener().onEvents(event);
 	}
 }

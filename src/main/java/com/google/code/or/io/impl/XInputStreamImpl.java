@@ -19,6 +19,7 @@ package com.google.code.or.io.impl;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.zip.CRC32;
 
 import com.google.code.or.common.glossary.UnsignedLong;
 import com.google.code.or.common.glossary.column.BitColumn;
@@ -40,7 +41,10 @@ public class XInputStreamImpl extends InputStream implements XInputStream {
 	private int readLimit = 0;
 	private final byte[] buffer;
 	private final InputStream is;
-	
+
+	private int mark;
+	private int markCount;
+
 
 	/**
 	 * 
@@ -163,6 +167,7 @@ public class XInputStreamImpl extends InputStream implements XInputStream {
 	
 	public BitColumn readBit(int length, boolean littleEndian) throws IOException {
 		byte[] bytes = readBytes((int)((length + 7) >> 3));
+		System.out.println(java.util.Arrays.toString(bytes));
 		if(!littleEndian) bytes = CodecUtils.toBigEndian(bytes);
 		return BitColumn.valueOf(length, bytes);
 	}
@@ -269,5 +274,31 @@ public class XInputStreamImpl extends InputStream implements XInputStream {
 			}
 		}
 		return len;
+	}
+
+	/**
+	 *
+	 */
+	@Override
+	public synchronized void mark() {
+		this.mark = this.head;
+	}
+
+	/**
+	 *
+	 * @param checksum
+	 * @param length
+	 * @return
+	 */
+	@Override
+	public boolean validate(long checksum, int length) {
+		CRC32 crc = new CRC32();
+		crc.update(this.buffer, this.mark, length);
+		long crc32 = crc.getValue();
+		System.out.println(checksum + " : " + crc32);
+		if (checksum == crc32) {
+			return true;
+		}
+		return false;
 	}
 }

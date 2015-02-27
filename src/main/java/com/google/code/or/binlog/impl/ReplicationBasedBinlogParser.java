@@ -40,7 +40,7 @@ public class ReplicationBasedBinlogParser extends AbstractBinlogParser {
 	//
 	protected Transport transport;
 	protected String binlogFileName;
-	
+
 
 	/**
 	 * 
@@ -84,14 +84,14 @@ public class ReplicationBasedBinlogParser extends AbstractBinlogParser {
 	protected void doParse() throws Exception {
 		//
 		final XInputStream is = this.transport.getInputStream();
-		final Context context = new Context(this.binlogFileName);
+		final Context context = new Context(this.binlogFileName, this.checksumEnabled, this.verifyChecksum);
 		while(isRunning()) {
 			try {
 				// Parse packet
 				final int packetLength = is.readInt(3);
 				final int packetSequence = is.readInt(1);
 				is.setReadLimit(packetLength); // Ensure the packet boundary
-				
+
 				//
 				final int packetMarker = is.readInt(1);
 				if(packetMarker != OKPacket.PACKET_MARKER) { // 0x00
@@ -105,7 +105,7 @@ public class ReplicationBasedBinlogParser extends AbstractBinlogParser {
 						throw new RuntimeException("assertion failed, invalid packet marker: " + packetMarker);
 					}
 				}
-				
+				is.mark(); // for checksum validation
 				// Parse the event header
 				final BinlogEventV4HeaderImpl header = new BinlogEventV4HeaderImpl();
 				header.setTimestamp(is.readLong(4) * 1000L);

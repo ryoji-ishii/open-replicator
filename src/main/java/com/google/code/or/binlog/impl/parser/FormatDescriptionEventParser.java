@@ -17,10 +17,12 @@
 package com.google.code.or.binlog.impl.parser;
 
 import java.io.IOException;
+import java.util.zip.CRC32;
 
 import com.google.code.or.binlog.BinlogEventV4Header;
 import com.google.code.or.binlog.BinlogParserContext;
 import com.google.code.or.binlog.impl.event.FormatDescriptionEvent;
+import com.google.code.or.common.util.MySQLConstants;
 import com.google.code.or.io.XInputStream;
 
 /**
@@ -46,7 +48,12 @@ public class FormatDescriptionEventParser extends AbstractBinlogEventParser {
 		event.setServerVersion(is.readFixedLengthString(50));
 		event.setCreateTimestamp(is.readLong(4) * 1000L);
 		event.setHeaderLength(is.readInt(1));
-		event.setEventTypes(is.readBytes(is.available()));
+		if (context.isEnabledChecksum()) {
+			event.setEventTypes(is.readBytes(is.available() - MySQLConstants.BINLOG_CHECKSUM_LEN));
+			this.validateChecksum(is, header, context.isVerifyChecksum());
+		} else {
+			event.setEventTypes(is.readBytes(is.available()));
+		}
 		context.getEventListener().onEvents(event);
 	}
 }
