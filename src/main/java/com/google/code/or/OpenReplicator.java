@@ -19,9 +19,7 @@ package com.google.code.or;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.google.code.or.binlog.BinlogEventListener;
-import com.google.code.or.binlog.BinlogParser;
-import com.google.code.or.binlog.BinlogParserListener;
+import com.google.code.or.binlog.*;
 import com.google.code.or.binlog.impl.ReplicationBasedBinlogParser;
 import com.google.code.or.binlog.impl.parser.DeleteRowsEventParser;
 import com.google.code.or.binlog.impl.parser.DeleteRowsEventV2Parser;
@@ -75,11 +73,13 @@ public class OpenReplicator {
 
 	protected boolean checksumEnabled;
 	protected boolean verifyChecksum;
+	protected boolean gtidEnabled;
 
 	//
 	protected Transport transport;
 	protected BinlogParser binlogParser;
 	protected BinlogEventListener binlogEventListener;
+	protected BinlogStopHandler binlogStopHandler;
 	protected final AtomicBoolean running = new AtomicBoolean(false);
 	
 	/**
@@ -89,12 +89,12 @@ public class OpenReplicator {
 		return this.running.get();
 	}
 	
-	public void start() throws Exception {
+	public void start(BinlogStopHandler stopHandler) throws Exception {
 		//
 		if(!this.running.compareAndSet(false, true)) {
 			return;
 		}
-		
+		this.binlogStopHandler = stopHandler;
 		//
 		if(this.transport == null) this.transport = getDefaultTransport();
 		this.transport.connect(this.host, this.port);
@@ -108,9 +108,11 @@ public class OpenReplicator {
 		}
 
 		//
-		//dumpBinlog();
-		dumpBinGtidlog();
-		
+		if (this.gtidEnabled) {
+			dumpBinGtidlog();
+		} else {
+			dumpBinlog();
+		}
 		//
 		if(this.binlogParser == null) this.binlogParser = getDefaultBinlogParser();
 		this.binlogParser.setEventListener(this.binlogEventListener);
@@ -239,6 +241,14 @@ public class OpenReplicator {
 
 	public void setVerifyChecksum(boolean verifyChecksum) {
 		this.verifyChecksum = verifyChecksum;
+	}
+
+	public boolean isGtidEnabled() {
+		return gtidEnabled;
+	}
+
+	public void setGtidEnabled(boolean gtidEnabled) {
+		this.gtidEnabled = gtidEnabled;
 	}
 
 	/**

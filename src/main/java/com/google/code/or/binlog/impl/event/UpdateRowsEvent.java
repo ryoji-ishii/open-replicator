@@ -58,7 +58,9 @@ public final class UpdateRowsEvent extends AbstractRowEvent {
 	public String toString() {
 		return new ToStringBuilder(this)
 		.append("header", header)
+		.append("databaseName", databaseName)
 		.append("tableId", tableId)
+		.append("tableName", tableName)
 		.append("reserved", reserved)
 		.append("columnCount", columnCount)
 		.append("usedColumnsBefore", usedColumnsBefore)

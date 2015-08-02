@@ -56,7 +56,9 @@ public class UpdateRowsEventParser extends AbstractRowEventParser {
 		
 		//
 		final UpdateRowsEvent event = new UpdateRowsEvent(header);
+		event.setDatabaseName(tme.getDatabaseName().toString());
 		event.setTableId(tableId);
+		event.setTableName(tme.getTableName().toString());
 		event.setReserved(is.readInt(2));
 		event.setColumnCount(is.readUnsignedLong()); 
 		event.setUsedColumnsBefore(is.readBit(event.getColumnCount().intValue()));

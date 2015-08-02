@@ -22,9 +22,19 @@ package com.google.code.or.binlog.impl.event;
  */
 public abstract class AbstractRowEvent extends AbstractBinlogEventV4 {
 	//
+	protected String databaseName;
 	protected long tableId;
+	protected String tableName;
 	protected int reserved;
-	
+
+	public String getDatabaseName() {
+		return databaseName;
+	}
+
+	public void setDatabaseName(String databaseName) {
+		this.databaseName = databaseName;
+	}
+
 	/**
 	 * 
 	 */
@@ -34,6 +44,14 @@ public abstract class AbstractRowEvent extends AbstractBinlogEventV4 {
 
 	public void setTableId(long tableId) {
 		this.tableId = tableId;
+	}
+
+	public String getTableName() {
+		return tableName;
+	}
+
+	public void setTableName(String tableName) {
+		this.tableName = tableName;
 	}
 
 	public int getReserved() {

@@ -60,7 +60,9 @@ public final class UpdateRowsEventV2 extends AbstractRowEvent {
 	public String toString() {
 		return new ToStringBuilder(this)
 		.append("header", header)
+		.append("databaseName", databaseName)
 		.append("tableId", tableId)
+		.append("tableName", tableName)
 		.append("reserved", reserved)
 		.append("extraInfoLength", extraInfoLength)
 		.append("extraInfo", extraInfo)

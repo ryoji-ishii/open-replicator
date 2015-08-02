@@ -57,18 +57,17 @@ public class UpdateRowsEventV2Parser extends AbstractRowEventParser {
 		
 		//
 		final UpdateRowsEventV2 event = new UpdateRowsEventV2(header);
+		event.setDatabaseName(tme.getDatabaseName().toString());
 		event.setTableId(tableId);
+		event.setTableName(tme.getTableName().toString());
 		event.setReserved(is.readInt(2));
 		event.setExtraInfoLength(is.readInt(2));
-		System.out.println(event.getExtraInfoLength());
 		if(event.getExtraInfoLength() > 2) {
 			event.setExtraInfo(is.readBytes(event.getExtraInfoLength() - 2));
-			System.out.println(new String(event.getExtraInfo()));
 		}
 		event.setColumnCount(is.readUnsignedLong()); 
 		event.setUsedColumnsBefore(is.readBit(event.getColumnCount().intValue()));
 		event.setUsedColumnsAfter(is.readBit(event.getColumnCount().intValue()));
-		System.out.println(event.toString());
 		event.setRows(parseRows(is, tme, event, context.isEnabledChecksum()));
 		if (context.isEnabledChecksum()) {
 			this.validateChecksum(is, header, context.isVerifyChecksum());
@@ -85,9 +84,7 @@ public class UpdateRowsEventV2Parser extends AbstractRowEventParser {
 		int surplus = enabledChecksum ? MySQLConstants.BINLOG_CHECKSUM_LEN : 0;
 		while(is.available() > surplus) {
 			final Row before = parseRow(is, tme, ure.getUsedColumnsBefore());
-			System.out.println("before=" + before);
 			final Row after = parseRow(is, tme, ure.getUsedColumnsAfter());
-			System.out.println("after=" + after);
 			r.add(new Pair<Row>(before, after));
 		}
 		return r;
