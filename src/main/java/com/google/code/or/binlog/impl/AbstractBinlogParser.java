@@ -51,7 +51,6 @@ public abstract class AbstractBinlogParser implements BinlogParser {
 	protected boolean clearTableMapEventsOnRotate = true;
 	protected boolean checksumEnabled;
 	protected boolean verifyChecksum;
-	protected BinlogStopHandler stopHandler;
 	protected final List<BinlogParserListener> parserListeners;
 	protected final AtomicBoolean verbose = new AtomicBoolean(false);
 	protected final AtomicBoolean running = new AtomicBoolean(false);
@@ -153,15 +152,6 @@ public abstract class AbstractBinlogParser implements BinlogParser {
 		this.eventListener = listener;
 	}
 
-	public BinlogStopHandler getStopHandler() {
-		return stopHandler;
-	}
-
-	@Override
-	public void setStopHandler(BinlogStopHandler stopHandler) {
-		this.stopHandler = stopHandler;
-	}
-
 	public boolean isClearTableMapEventsOnRotate() {
 		return clearTableMapEventsOnRotate;
 	}
@@ -224,7 +214,10 @@ public abstract class AbstractBinlogParser implements BinlogParser {
 	}
 	
 	public boolean addParserListener(BinlogParserListener listener) {
-		return this.parserListeners.add(listener);
+		if (!this.parserListeners.contains(listener)) {
+			return this.parserListeners.add(listener);
+		}
+		return false;
 	}
 	
 	public boolean removeParserListener(BinlogParserListener listener) {
@@ -275,10 +268,6 @@ public abstract class AbstractBinlogParser implements BinlogParser {
 					stop(0, TimeUnit.MILLISECONDS);
 				} catch(Exception e) {
 					LOGGER.error("failed to stop binlog parser", e);
-				}
-				BinlogStopHandler handler = stopHandler;
-				if (handler != null) {
-					handler.onStop();
 				}
 			}
 		}

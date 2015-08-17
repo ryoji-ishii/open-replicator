@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<Configuration status="trace" monitorInterval="5">
+    <!--
+        Appender Configuration
+    -->
+    <Appenders>
+        <!-- Standard-IO Appender -->
+        <Console name="STDOUT" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d %-5p [%t] (%F:%L) - %m%n"/>
+        </Console>
+
+        <!--
+         Appender Configuration
+        -->
+        <!-- DefaultAppender -->
+        <RollingFile name="SERVER.LOG" fileName="logs/server.log" filePattern="logs/server-%d{yyyy-MM-dd}.log"
+                bufferedIO="false">
+            <Filters>
+                <ThresholdFilter level="info"/>
+                <MarkerFilter marker="JOURNAL" onMatch="DENY" onMismatch="ACCEPT"/>
+            </Filters>
+            <PatternLayout
+                    pattern="%d{yyyy/MM/dd HH:mm:ss.SSS}|%d{UNIX_MILLIS}|[%p]|%t|%X{ip}|%X{traceId}|%c|%m%ex{none}%n"/>
+
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+        </RollingFile>
+
+        <!-- TraceAppender -->
+        <RollingFile name="TRACE.LOG" fileName="logs/trace.log" filePattern="logs/$${date:yyyy-MM-dd}/trace-%d{yyyy-MM-dd}-%i.log.gz"
+                bufferedIO="false">
+            <PatternLayout pattern="%d{yyyy/MM/dd HH:mm:ss.SSS}|[%p]|%t|%X{ip}|%X{traceId}|%c|%m%ex%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="250 MB"/>
+            </Policies>
+        </RollingFile>
+
+        <!-- ErrorAppender -->
+        <RollingFile name="ERROR.LOG" fileName="logs/error.log" filePattern="logs/error-%d{yyyy-MM-dd}.log"
+                bufferedIO="false">
+            <ThresholdFilter level="warn"/>
+            <PatternLayout
+                    pattern="%d{yyyy/MM/dd HH:mm:ss.SSS}|%d{UNIX_MILLIS}|[%p]|%t|%X{ip}|%X{traceId}|%c|%m%ex%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+        </RollingFile>
+
+        <!-- JournalAppender -->
+        <RollingFile name="JOURNAL.LOG" fileName="logs/journal.log"
+                     filePattern="logs/journal-%d{yyyy-MM-dd}.log"
+                     bufferedIO="false">
+            <Filters>
+                <ThresholdFilter level="info"/>
+                <MarkerFilter marker="JOURNAL" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <PatternLayout
+                    pattern="%d{yyyy/MM/dd HH:mm:ss.SSS}|%d{UNIX_MILLIS}|[%p]|%t|%X{ip}|%X{traceId}|%c|%m%n"/>
+
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+        </RollingFile>
+
+        <!-- StatsAppender -->
+        <RollingFile name="STATS.LOG"  fileName="logs/stats.log" filePattern="logs/stats-%d{yyyy-MM-dd}.log"
+                bufferedIO="false">
+            <ThresholdFilter level="info"/>
+            <PatternLayout pattern="%d{yyyy/MM/dd HH:mm:ss.SSS}|[%p]|%t|%X{traceId}|%c|%m%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+        </RollingFile>
+
+        <!-- MQAppender -->
+        <RollingFile name="MQ.LOG"  fileName="logs/mq.log" filePattern="logs/mq-%d{yyyy-MM-dd}.log"
+                     bufferedIO="false">
+            <PatternLayout
+                    pattern="%d{yyyy/MM/dd HH:mm:ss.SSS}|[%p]|%t|%X{traceId}|%c|%m%ex{none}%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+        </RollingFile>
+
+        <!-- ログ出力非同期アペンダー -->
+        <Async name="ASYNC.LOG" bufferSize="1280">
+            <Appender-Ref ref="STATS.LOG"/>
+        </Async>
+    </Appenders>
+	<!--
+		Logger Configuration
+	-->
+    <Loggers>
+        <!-- Application Default Category -->
+        <logger name="jp" level="info" additivity="true"/>
+        <logger name="com.dmm" level="trace" additivity="true">
+            <Appender-Ref ref="JOURNAL.LOG"/>
+        </logger>
+        <!-- for Subjects -->
+        <logger name="com.dmm.platform.core.io" level="info" additivity="true"/>
+        <logger name="com.dmm.platform.external.mq.websphere" level="info" additivity="true">
+            <Appender-Ref ref="MQ.LOG"/>
+            <Appender-Ref ref="ERROR.LOG"/>
+        </logger>
+        <logger name="com.dmm.platform.external.mq.websphere.WMQQueueMonitor" level="info"/>
+        <logger name="com.dmm.platform.vertx.java.impl.web.HttpServerModBus" level="trace"/>
+        <logger name="com.dmm.platform.vertx.java.prototype.dpoint.sql" level="trace"/>
+        <logger name="com.dmm.platform.util.Stats" level="info" additivity="false">
+            <appender-ref ref="STATS.LOG"/>
+        </logger>
+        <logger name="com.dmm.platform.vertx.java.util.ConfigUtil" level="debug" additivity="true"/>
+        <!-- for Spring -->
+        <logger name="org" level="trace" additivity="true"/>
+        <!-- for EHCache -->
+        <logger name="net" level="info" additivity="true"/>
+        <!-- for Library -->
+        <logger name="com" level="trace" additivity="true"/>
+        <!-- for SwiftMQ -->
+        <logger name="com.ibm" level="info" additivity="true"/>
+
+        <!-- Root Category -->
+        <root level="info">
+            <!--<Appender-Ref ref="STDOUT"/>-->
+            <Appender-Ref ref="SERVER.LOG"/>
+            <Appender-Ref ref="TRACE.LOG"/>
+            <Appender-Ref ref="ERROR.LOG"/>
+        </root>
+    </Loggers>
+</Configuration>

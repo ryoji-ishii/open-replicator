@@ -79,7 +79,7 @@ public class OpenReplicator {
 	protected Transport transport;
 	protected BinlogParser binlogParser;
 	protected BinlogEventListener binlogEventListener;
-	protected BinlogStopHandler binlogStopHandler;
+	protected BinlogParserListener binlogParserListener;
 	protected final AtomicBoolean running = new AtomicBoolean(false);
 	
 	/**
@@ -88,13 +88,23 @@ public class OpenReplicator {
 	public boolean isRunning() {
 		return this.running.get();
 	}
+
+	public void start(BinlogStartHandler startHandler, BinlogStopHandler stopHandler, BinlogErrorHandler errorHandler) throws Exception {
+		this.start(new BinlogParserListenerImpl(startHandler, stopHandler, errorHandler));
+	}
+
+	public void start() throws Exception {
+		this.start(null);
+	}
 	
-	public void start(BinlogStopHandler stopHandler) throws Exception {
+	public void start(BinlogParserListener parserListener) throws Exception {
 		//
 		if(!this.running.compareAndSet(false, true)) {
 			return;
 		}
-		this.binlogStopHandler = stopHandler;
+		if (parserListener != null) {
+			this.binlogParserListener = parserListener;
+		}
 		//
 		if(this.transport == null) this.transport = getDefaultTransport();
 		this.transport.connect(this.host, this.port);
@@ -116,12 +126,7 @@ public class OpenReplicator {
 		//
 		if(this.binlogParser == null) this.binlogParser = getDefaultBinlogParser();
 		this.binlogParser.setEventListener(this.binlogEventListener);
-		this.binlogParser.addParserListener(new BinlogParserListener.Adapter() {
-			@Override
-			public void onStop(BinlogParser parser) {
-				stopQuietly(0, TimeUnit.MILLISECONDS);
-			}
-		});
+		this.binlogParser.addParserListener(this.binlogParserListener);
 		this.binlogParser.start();
 	}
 
@@ -314,8 +319,6 @@ public class OpenReplicator {
 			QueryResultRow row = resultSet.next();
 			this.binlogFileName = row.getValue("File").toString();
 			this.binlogPosition = Long.parseLong(row.getValue("Position").toString());
-			System.out.println("file=" + this.binlogFileName);
-			System.out.println("position=" + this.binlogPosition);
 		}
 		return this.binlogPosition;
 	}
@@ -408,5 +411,38 @@ public class OpenReplicator {
 		r.setChecksumEnabled(this.checksumEnabled);
 		r.setVerifyChecksum(this.verifyChecksum);
 		return r;
+	}
+
+	private class BinlogParserListenerImpl implements BinlogParserListener {
+		protected BinlogStartHandler binlogStartHandler;
+		protected BinlogErrorHandler binlogErrorHandler;
+		protected BinlogStopHandler binlogStopHandler;
+
+		private BinlogParserListenerImpl(BinlogStartHandler startHandler, BinlogStopHandler stopHandler, BinlogErrorHandler errorHandler) {
+			this.binlogStartHandler = startHandler;
+			this.binlogStopHandler = stopHandler;
+			this.binlogErrorHandler = errorHandler;
+		}
+
+		@Override
+		public void onStart(BinlogParser parser) {
+			if (this.binlogStartHandler != null) {
+				this.binlogStartHandler.onStart();
+			}
+		}
+
+		@Override
+		public void onStop(BinlogParser parser) {
+			if (this.binlogStopHandler != null) {
+				this.binlogStopHandler.onStop();
+			}
+		}
+
+		@Override
+		public void onException(BinlogParser parser, Exception exception) {
+			if (this.binlogErrorHandler != null) {
+				this.binlogErrorHandler.onError(exception);
+			}
+		}
 	}
 }

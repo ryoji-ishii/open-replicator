@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.concurrent.TimeUnit;
 
+import com.google.code.or.binlog.BinlogErrorHandler;
+import com.google.code.or.binlog.BinlogStartHandler;
 import com.google.code.or.binlog.BinlogStopHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,9 +38,20 @@ public class OpenReplicatorTest {
 				LOGGER.info("{}", event);
 			}
 		});
-		or.start(new BinlogStopHandler() {
+		or.start(new BinlogStartHandler() {
+			@Override
+			public void onStart() {
+				System.out.println("replicator start.");
+			}
+		}, new BinlogStopHandler() {
 			public void onStop() {
 				System.out.println("replicator stop.");
+			}
+		}, new BinlogErrorHandler() {
+			@Override
+			public void onError(Throwable e) {
+				System.out.println("replicator error.");
+				e.printStackTrace();
 			}
 		});
 

@@ -167,7 +167,6 @@ public class XInputStreamImpl extends InputStream implements XInputStream {
 	
 	public BitColumn readBit(int length, boolean littleEndian) throws IOException {
 		byte[] bytes = readBytes((int)((length + 7) >> 3));
-		System.out.println(java.util.Arrays.toString(bytes));
 		if(!littleEndian) bytes = CodecUtils.toBigEndian(bytes);
 		return BitColumn.valueOf(length, bytes);
 	}
@@ -295,7 +294,6 @@ public class XInputStreamImpl extends InputStream implements XInputStream {
 		CRC32 crc = new CRC32();
 		crc.update(this.buffer, this.mark, length);
 		long crc32 = crc.getValue();
-		System.out.println(checksum + " : " + crc32);
 		if (checksum == crc32) {
 			return true;
 		}

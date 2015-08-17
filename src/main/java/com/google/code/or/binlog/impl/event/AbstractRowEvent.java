@@ -16,6 +16,8 @@
  */
 package com.google.code.or.binlog.impl.event;
 
+import com.google.code.or.common.glossary.Metadata;
+
 /**
  * 
  * @author Jingqi Xu
@@ -26,6 +28,7 @@ public abstract class AbstractRowEvent extends AbstractBinlogEventV4 {
 	protected long tableId;
 	protected String tableName;
 	protected int reserved;
+	protected Metadata metadata;
 
 	public String getDatabaseName() {
 		return databaseName;
@@ -52,6 +55,14 @@ public abstract class AbstractRowEvent extends AbstractBinlogEventV4 {
 
 	public void setTableName(String tableName) {
 		this.tableName = tableName;
+	}
+
+	public Metadata getMetadata() {
+		return this.metadata;
+	}
+
+	public void setMetadata(Metadata metadata) {
+		this.metadata = metadata;
 	}
 
 	public int getReserved() {

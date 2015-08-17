@@ -42,8 +42,6 @@ public interface BinlogParser {
 	
 	void setEventListener(BinlogEventListener listener);
 
-	void setStopHandler(BinlogStopHandler handler);
-	
 	/**
 	 * 
 	 */
